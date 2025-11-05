@@ -1,0 +1,44 @@
+<div class="navbar">
+    <div class="nav-left">
+        <a href="/" class="nav-link">HOME</a>
+        <a href="/tooltab" class="nav-link">TOOLS</a>
+        <a href="/logs" class="nav-link">LOGS</a>
+    </div>
+
+    <div class="nav-right">
+        <a href="/adminlogin" class="nav-link">ADMIN</a>
+    </div>
+</div>
+
+<style>
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0; 
+    background-color: #12436D;
+    padding: 10px 40px; 
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-sizing: border-box; 
+    z-index: 1000;
+}
+
+.nav-left, .nav-right {
+    display: flex;
+    gap: 20px;
+}
+
+.nav-link {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    transition: color 0.2s ease;
+    white-space: nowrap;
+}
+
+.nav-link:hover {
+    color: grey;
+}
+</style>

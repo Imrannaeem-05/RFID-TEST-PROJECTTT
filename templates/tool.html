@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tool Borrowing</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: teal;
+            text-align: left;
+            margin-top: 0;
+        }
+        .container {
+            width: 420px;
+            margin: auto;
+            margin-top: 150px;
+            background: white;
+            text-align: center;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #444;
+        }
+        input {
+            padding: 10px;
+            width: 90%;
+            border-radius: 8px;
+            border: 1px solid #aaa;
+            margin-top: 10px;
+        }
+        button {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            border: none;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .message {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        .message.red {
+            color: red!important;
+        }
+        .message.green {
+            color: green !important;
+        }
+        .tool-info {
+            margin-top: 15px;
+            font-weight: bold;
+            color: #333;
+        }
+
+    </style>
+</head>
+<body>
+    {% include 'navigationbar.html' %}
+    
+    <div class="container">
+        <h1>Welcome, {{ name }}</h1>
+        <p>Scan or enter your Tool ID below:</p>
+
+        <form method="POST" autocomplete="off" id="toolForm">
+            <input type="text" id="tool_id" name="tool_id" placeholder="Enter Tool ID" autofocus>
+            <br>
+            <button type="submit">Submit</button>
+        </form>
+
+        {% if tool_name %}
+            <div class="tool-info">
+                ✅ Tool Recognized: <strong>{{ tool_name }}</strong>
+            </div>
+        {% endif %}
+
+        {% if message %}
+            <p class="message {% if color %}{{ color }}{% endif %}">{{ message }}</p>
+        {% endif %}
+    </div>
+
+    <script>
+        const toolInput = document.getElementById('tool_id');
+        const toolForm = document.getElementById('toolForm');
+
+        window.onload = () => {
+            toolInput.focus();
+        };
+
+        toolForm.addEventListener('submit', () => {
+            setTimeout(() => {
+                toolInput.value = '';
+                toolInput.focus(); 
+            }, 100);
+        });
+    </script>
+</body>
+</html>

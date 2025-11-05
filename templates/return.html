@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Return Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: left;
+            margin-top: 0;
+            background-color: teal;
+        }
+        .container {
+            width: 400px;
+            margin: auto;
+            margin-top: 150px;
+            text-align: center;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        label {
+            display: block;
+            margin-top: 15px;
+            text-align: left;
+            margin-left: 20px;
+            font-weight: bold;
+        }
+        input, select {
+            padding: 10px;
+            width: 90%;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            margin-top: 10px;
+        }
+        button {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            border: none;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .message {
+            margin-top: 15px;
+            font-weight: bold;
+            color: red;
+        }
+       
+        
+    </style>
+</head>
+<body>
+    {% include 'navigationbar.html' %}
+    
+    <div class="container">
+        <h1>Return Tool</h1>
+
+        <form method="POST" autocomplete="off" id="returnForm">
+            <label for="tool_id">Scan Tool ID:</label>
+            <input type="text" id="tool_id" name="tool_id" placeholder="" autocomplete="off" autofocus>
+            
+            <label for="condition">Tool Condition:</label>
+            <select id="condition" name="condition" required>
+                <option value=""> SELECT CONDITION</option>
+                <option value="Good">GOOD</option>
+                <option value="Damaged">DAMAGED</option>
+            </select>
+            
+            <br>
+            <button type="submit">Return</button>
+        </form>
+
+        {% if message %}
+            <p class="message">{{ message }}</p>
+        {% endif %}
+    </div>
+
+    <script>
+        const toolInput = document.getElementById('tool_id');
+        const returnForm = document.getElementById('returnForm');
+
+        window.onload = () => {
+            toolInput.focus();
+        };
+
+        returnForm.addEventListener('submit', () => {
+            setTimeout(() => {
+                toolInput.value = '';
+                toolInput.focus(); 
+            }, 100); 
+        });
+    </script>
+</body>
+</html>
