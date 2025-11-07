@@ -53,7 +53,7 @@
         .message {
             margin-top: 15px;
             font-weight: bold;
-            color: red;
+            
         }
        
         
@@ -81,7 +81,7 @@
         </form>
 
         {% if message %}
-            <p class="message">{{ message }}</p>
+            <p class="message" style="color: {{ color }};">{{ message }}</p>
         {% endif %}
     </div>
 

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 import pandas as pd
 import os
 
@@ -25,7 +25,7 @@ def borrow():
     message = None
     color = None
     if request.method == "POST":
-        user_id = request.form.get("user_id", "").strip()
+        user_id = request.form.get("user_id", "").strip().upper()
 
         
         df_users = pd.read_excel(EXCEL_FILE, sheet_name="UserList")
@@ -46,7 +46,7 @@ def borrow():
     return render_template("home.html", message=message, color=color)
 
 
-@app.route("/tool", methods=["GET", "POST"]) #after verified user and wanna scan da tool
+@app.route("/tool", methods=["GET", "POST"])
 def tool():
     user_id = request.args.get("user_id", "")
     user_name = request.args.get("name", "")
@@ -54,7 +54,7 @@ def tool():
     color = None
 
     if request.method == "POST":
-        tool_id = request.form.get("tool_id", "").strip()
+        tool_id = request.form.get("tool_id", "").strip().upper()
 
         if not tool_id:
             message = "Please scan a tool first."
@@ -84,8 +84,7 @@ def tool():
             color = "red"
             return render_template("tool.html", user_id=user_id, name=user_name, message=message, color=color)
 
-       
-        new_entry = pd.DataFrame([{ #saving da data in da excel i think
+        new_entry = pd.DataFrame([{
             "CardID": user_id,
             "Name": user_name,
             "ToolID": tool_id,
@@ -99,27 +98,27 @@ def tool():
         with pd.ExcelWriter(EXCEL_FILE, mode="a", engine="openpyxl", if_sheet_exists="replace") as writer:
             df_log.to_excel(writer, sheet_name="UserLog", index=False)
 
-        
-        return redirect(url_for("show_logs"))
+        message = f"{tool_name} borrowed successfully!"
+        color = "green"
+        return render_template("tool.html", user_id=user_id, name=user_name, message=message, color=color)
 
     return render_template("tool.html", user_id=user_id, name=user_name, message=message, color=color)
 
 
 
-
-@app.route("/return", methods=["GET", "POST"]) #after pressing return option gang
+@app.route("/return", methods=["GET", "POST"])
 def return_tool():
     message = None
 
     if request.method == "POST":
-        tool_id = request.form.get("tool_id", "").strip()
+        tool_id = request.form.get("tool_id", "").strip().upper()
         condition = request.form.get("condition", "Good")
 
         if not tool_id:
             message = "Please scan a tool first."
-            return render_template("return.html", message=message)
+            color = "red"
+            return render_template("return.html", message=message , color=color)
 
-        
         df_tools = pd.read_excel(EXCEL_FILE, sheet_name="ToolList")
         df_tools.columns = df_tools.columns.str.strip()
         df_tools["ToolID"] = df_tools["ToolID"].astype(str).str.strip()
@@ -128,28 +127,29 @@ def return_tool():
 
         if tool_match.empty:
             message = "ToolID not found!"
-            return render_template("return.html", message=message)
+            color = "red"
+            return render_template("return.html", message=message , color=color)
 
         tool_name = tool_match.iloc[0]["ToolName"]
 
-        
         df_log = pd.read_excel(EXCEL_FILE, sheet_name="UserLog")
         df_log.columns = df_log.columns.str.strip()
 
         last_action = df_log[df_log["ToolID"] == tool_id].tail(1)
 
-        if last_action.empty: #if wan return tool that tak borrow yet
+        if last_action.empty:
             message = "This tool has not been borrowed."
-            return render_template("return.html", message=message)
+            color = "red"
+            return render_template("return.html", message=message, color=color)
 
-        if last_action.iloc[0]["Action"] == "RETURN": # wan return tool that oredi return
+        if last_action.iloc[0]["Action"] == "RETURN":
             message = "This tool has already been returned."
-            return render_template("return.html", message=message)
+            color = "red"
+            return render_template("return.html", message=message, color=color)
 
         borrower_id = last_action.iloc[0]["CardID"]
         borrower_name = last_action.iloc[0]["Name"]
 
-        
         new_entry = pd.DataFrame([{
             "CardID": borrower_id,
             "Name": borrower_name,
@@ -164,10 +164,11 @@ def return_tool():
         with pd.ExcelWriter(EXCEL_FILE, mode="a", engine="openpyxl", if_sheet_exists="replace") as writer:
             df_log.to_excel(writer, sheet_name="UserLog", index=False)
 
-        return redirect(url_for("show_logs"))
+        message = f"{tool_name} returned successfully!"
+        color = "green"
+        return render_template("return.html", message=message, color=color)
 
     return render_template("return.html", message=message)
-
 
 @app.route("/logs") #log table la apa lagi
 def show_logs():
@@ -236,6 +237,27 @@ def tool_tab():
         })    
 
     return render_template("tooltab.html", tools=tools_list)
+
+
+
+@app.route("/adminlogin", methods=["GET", "POST"])
+def admin_login():
+    message = None
+    color = None
+
+    if request.method == "POST":
+        card_id = request.form.get("user_id", "").strip().upper()
+        
+        if card_id == "E20047124741662E032E737C": #card putih (user card)
+            session['admin'] = True
+            flash("Welcome, Admin!", "success")
+            return redirect("/logs")
+        else:
+            message = "Access Denied — Admin Only"
+            color = "red"
+
+    return render_template("adminlogin.html", message=message, color=color)
+
     
 
 
