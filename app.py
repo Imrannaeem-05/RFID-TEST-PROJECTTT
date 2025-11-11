@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 import pandas as pd
 import os
 
@@ -41,68 +41,76 @@ def borrow():
             return render_template("home.html", message=message, color=color)
 
         user_name = match.iloc[0]["Name"]
-        return redirect(url_for("tool", user_id=user_id, name=user_name))
+        return redirect(f"/tool?user_id={user_id}&name={user_name}")
 
     return render_template("home.html", message=message, color=color)
 
-
-@app.route("/tool", methods=["GET", "POST"])
+@app.route("/tool", methods=["GET"])
 def tool():
     user_id = request.args.get("user_id", "")
     user_name = request.args.get("name", "")
-    message = None
-    color = None
+    return render_template("tool.html", user_id=user_id, name=user_name)
 
-    if request.method == "POST":
-        tool_id = request.form.get("tool_id", "").strip().upper()
+@app.route("/validate_tool", methods=["POST"])
+def validate_tool():
+    data = request.get_json()
+    tool_id = data.get("tool_id", "").strip().upper()
+    
+    df_tools = pd.read_excel(EXCEL_FILE, sheet_name="ToolList")
+    df_tools.columns = df_tools.columns.str.strip()
+    df_tools["ToolID"] = df_tools["ToolID"].astype(str).str.strip()
+    
+    tool_match = df_tools[df_tools["ToolID"] == tool_id]
+    
+    if tool_match.empty:
+        return {"valid": False, "message": "ToolID not found!"}
+    
+    tool_name = tool_match.iloc[0]["ToolName"]
+    
+    # check if already borrowed
+    df_log = pd.read_excel(EXCEL_FILE, sheet_name="UserLog")
+    df_log.columns = df_log.columns.str.strip()
+    last_action = df_log[df_log["ToolID"] == tool_id].tail(1)
+    
+    if not last_action.empty and last_action.iloc[0]["Action"] == "BORROW":
+        return {"valid": False, "message": "Tool is currently borrowed!"}
+    
+    return {"valid": True, "tool_name": tool_name}
 
-        if not tool_id:
-            message = "Please scan a tool first."
-            color = "red"
-            return render_template("tool.html", user_id=user_id, name=user_name, message=message, color=color)
 
-        df_tools = pd.read_excel(EXCEL_FILE, sheet_name="ToolList")
-        df_tools.columns = df_tools.columns.str.strip()
-        df_tools["ToolID"] = df_tools["ToolID"].astype(str).str.strip()
-
-        tool_match = df_tools[df_tools["ToolID"] == tool_id]
-
-        if tool_match.empty:
-            message = "ToolID not found!"
-            color = "red"
-            return render_template("tool.html", user_id=user_id, name=user_name, message=message, color=color)
-
-        tool_name = tool_match.iloc[0]["ToolName"]
-
-        df_log = pd.read_excel(EXCEL_FILE, sheet_name="UserLog")
-        df_log.columns = df_log.columns.str.strip()
-
-        last_action = df_log[df_log["ToolID"] == tool_id].tail(1)
-
-        if not last_action.empty and last_action.iloc[0]["Action"] == "BORROW":
-            message = f"Tool has not been returned!"
-            color = "red"
-            return render_template("tool.html", user_id=user_id, name=user_name, message=message, color=color)
-
-        new_entry = pd.DataFrame([{
+@app.route("/borrow_all", methods=["POST"])
+def borrow_all():
+    data = request.get_json()
+    user_id = data.get("user_id")
+    user_name = data.get("user_name")
+    tools = data.get("tools", [])
+    
+    if not tools:
+        return {"success": False, "message": "No tools selected"}
+    
+    df_log = pd.read_excel(EXCEL_FILE, sheet_name="UserLog")
+    df_log.columns = df_log.columns.str.strip()
+    
+    new_entries = []
+    for tool in tools:
+        new_entry = {
             "CardID": user_id,
             "Name": user_name,
-            "ToolID": tool_id,
-            "ToolName": tool_name,
+            "ToolID": tool["id"],
+            "ToolName": tool["name"],
             "Action": "BORROW",
             "Condition": "-",
             "Timestamp": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
-        }])
-
-        df_log = pd.concat([df_log, new_entry], ignore_index=True)
-        with pd.ExcelWriter(EXCEL_FILE, mode="a", engine="openpyxl", if_sheet_exists="replace") as writer:
-            df_log.to_excel(writer, sheet_name="UserLog", index=False)
-
-        message = f"{tool_name} borrowed successfully!"
-        color = "green"
-        return render_template("tool.html", user_id=user_id, name=user_name, message=message, color=color)
-
-    return render_template("tool.html", user_id=user_id, name=user_name, message=message, color=color)
+        }
+        new_entries.append(new_entry)
+    
+    df_new = pd.DataFrame(new_entries)
+    df_log = pd.concat([df_log, df_new], ignore_index=True)
+    
+    with pd.ExcelWriter(EXCEL_FILE, mode="a", engine="openpyxl", if_sheet_exists="replace") as writer:
+        df_log.to_excel(writer, sheet_name="UserLog", index=False)
+    
+    return {"success": True, "message": f"{len(tools)} tools borrowed"}
 
 
 

@@ -43,65 +43,186 @@
             color: white;
             border-radius: 6px;
             cursor: pointer;
+            text-align: center;
         }
         button:hover {
             background-color: #0056b3;
         }
         .message {
-            margin-top: 20px;
-            font-weight: bold;
-        }
-        .message.red {
-            color: red!important;
-        }
-        .message.green {
-            color: green !important;
-        }
-        .tool-info {
             margin-top: 15px;
             font-weight: bold;
-            color: #333;
         }
-
+        .red {
+            color: red;
+        }
+        .green {
+            color: green;
+        }
+        .tool-list {
+            margin-top: 20px;
+            text-align: left;
+            padding: 10px;
+        }
+        .tool-item {
+            background: #f0f0f0;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        
+        .remove-btn {
+            color: #999;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 0 5px; 
+        }
+        .remove-btn:hover {
+            color: grey;
+        }
     </style>
 </head>
 <body>
     {% include 'navigationbar.html' %}
     
     <div class="container">
+        
         <h1>Welcome, {{ name }}</h1>
-        <p>Scan or enter your Tool ID below:</p>
+        <p>Scan Tool ID:</p>
 
-        <form method="POST" autocomplete="off" id="toolForm">
-            <input type="text" id="tool_id" name="tool_id" placeholder="Enter Tool ID" autofocus>
-            <br>
-            <button type="submit">Submit</button>
+        <form id="scanForm" autocomplete="off">
+            <input type="text" id="tool_id" placeholder="Enter Tool ID" autofocus>
         </form>
 
-        {% if tool_name %}
-            <div class="tool-info">
-                ✅ Tool Recognized: <strong>{{ tool_name }}</strong>
-            </div>
-        {% endif %}
+        <p id="statusMessage" class="message"></p>
 
-        {% if message %}
-            <p class="message {% if color %}{{ color }}{% endif %}">{{ message }}</p>
-        {% endif %}
+        <div class="tool-list" id="toolList"></div>
+
+        <button id="submitAll" style="display: none;">Borrow All Tools</button>
     </div>
 
-    <script>
+    <script> //not really that good with Java Script, but trying to understand 1by1
         const toolInput = document.getElementById('tool_id');
-        const toolForm = document.getElementById('toolForm');
+        const scanForm = document.getElementById('scanForm');
+        const toolList = document.getElementById('toolList');
+        const submitBtn = document.getElementById('submitAll');
+        const statusMsg = document.getElementById('statusMessage');
+        
+        let tools = [];
+        
+        const userId = "{{ user_id }}";
+        const userName = "{{ name }}";
 
         window.onload = () => {
             toolInput.focus();
         };
 
-        toolForm.addEventListener('submit', () => {
-            setTimeout(() => {
+        scanForm.addEventListener('submit', async (e) => {
+            e.preventDefault(); 
+            const toolId = toolInput.value.trim().toUpperCase();
+            
+            if (!toolId) return;
+
+            if (tools.find(t => t.id === toolId)) {
+                showMessage('Tool already in list!', 'red');
                 toolInput.value = '';
-                toolInput.focus(); 
-            }, 100);
+                return;
+            }
+
+            const response = await fetch('/validate_tool', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({tool_id: toolId})
+            });
+
+            const data = await response.json();
+
+            if (data.valid) {
+                tools.push({id: toolId, name: data.tool_name});
+                renderToolList();
+                showMessage(`Added: ${data.tool_name}`, 'green');
+                submitBtn.style.display = 'inline-block';
+            } else {
+                showMessage(data.message, 'red');
+            }
+
+            toolInput.value = '';
+            toolInput.focus();
+        });
+
+        
+        toolList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-btn')) {
+                const toolId = e.target.getAttribute('data-id');
+                
+                tools = tools.filter(tool => tool.id !== toolId);
+                
+                renderToolList();
+                
+                if (tools.length === 0) {
+                    submitBtn.style.display = 'none';
+                }
+            }
+        });
+
+
+        
+        function renderToolList() {
+            toolList.innerHTML = ''; 
+            tools.forEach(tool => {
+                const item = document.createElement('div');
+                item.className = 'tool-item';
+
+                const toolName = document.createElement('span');
+                toolName.textContent = tool.name;
+                
+                const removeBtn = document.createElement('span');
+                removeBtn.className = 'remove-btn';
+                removeBtn.textContent = 'X';
+                removeBtn.setAttribute('data-id', tool.id); 
+                
+                item.appendChild(toolName);
+                item.appendChild(removeBtn);
+                
+                toolList.appendChild(item);
+            });
+        }
+
+        function showMessage(msg, color) {
+            statusMsg.textContent = msg;
+            statusMsg.className = `message ${color}`;
+            setTimeout(() => {
+                statusMsg.textContent = '';
+            }, 3000);
+        }
+
+        
+        submitBtn.addEventListener('click', async () => {
+            if (tools.length === 0) return;
+
+            const response = await fetch('/borrow_all', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    user_id: userId,
+                    user_name: userName,
+                    tools: tools
+                })
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                showMessage(`Successfully borrowed ${tools.length} tool(s)!`, 'green');
+                tools = [];
+                toolList.innerHTML = '';
+                submitBtn.style.display = 'none';
+            } else {
+                showMessage('Error borrowing tools', 'red');
+            }
         });
     </script>
 </body>
